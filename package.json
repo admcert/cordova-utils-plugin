@@ -1,0 +1,26 @@
+{
+  "name": "cordova-utils-plugin",
+  "version": "1.0.0",
+  "description": "utils.",
+  "cordova": {
+    "id": "cordova-utils-plugin",
+    "platforms": [
+      "android"
+    ]
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/NeoLSN/cordova-plugin-android-permission.git"
+  },
+  "keywords": [
+    "ecosystem:cordova"
+  ],
+  "engines": [
+    {
+      "name": "cordova",
+      "version": ">=5.0.0"
+    }
+  ],
+  "author": "zhangjianying",
+  "license": "BSD"
+}

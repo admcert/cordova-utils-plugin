@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<plugin xmlns="http://apache.org/cordova/ns/plugins/1.0"
+        xmlns:android="http://schemas.android.com/apk/res/android"
+        id="cordova-plugin-utils"
+        version="1.0.0">
+
+  <name>Utils</name>
+
+  <description>Android utils support library.</description>
+
+  <author>zhangjianying</author>
+
+  <engines>
+    <engine name="cordova" version=">=5.0.0"/>
+  </engines>
+
+  <!-- android -->
+  <platform name="android">
+    <js-module src="www/utlslib.js" name="utilsLib">
+      <clobbers target="cordova.plugins.utils" />
+    </js-module>
+
+    <config-file target="res/xml/config.xml" parent="/*">
+      <feature name="utilsLib">
+        <param name="android-package" value="com.zsoftware.UtilsPlugin" />
+      </feature>
+    </config-file>
+
+    <source-file src="src/UtilsPlugin.java" target-dir="src/com/zsoftware"/>
+  </platform>
+
+ 
+
+
+
+</plugin>
