@@ -1,8 +1,16 @@
 package com.zsoftware;
 
+import android.annotation.TargetApi;
+import android.app.Activity;
+import android.content.ActivityNotFoundException;
 import android.content.Context;
+import android.content.Intent;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
+import android.net.Uri;
+import android.os.Build;
+import android.os.PowerManager;
+import android.provider.Settings;
 import android.util.Log;
 
 import org.apache.cordova.CallbackContext;
@@ -22,6 +30,8 @@ import java.io.OutputStreamWriter;
 import java.util.ArrayList;
 import java.util.List;
 
+import static android.content.Context.POWER_SERVICE;
+
 /**
  * 工具类 插件
  */
@@ -33,6 +43,7 @@ public class UtilsPlugin extends CordovaPlugin {
     private static String ISROOT_ACTION = "isDeviceRooted";
     private static String ISXPOSED_ACTION = "isXposed";
 
+    private static String BATTERYOPTIMIZATION_ACTION = "batteryOptimization";
     /**
      * Constructor.
      */
@@ -73,10 +84,36 @@ public class UtilsPlugin extends CordovaPlugin {
             return true;
         }
 
+        if(action.equalsIgnoreCase(BATTERYOPTIMIZATION_ACTION)){
+            ignoreBatteryOptimization();
+            callbackContext.success();
+            return true;
+        }
+
         // Only alert and confirm are async.
         callbackContext.success();
         return true;
     }
+
+    @TargetApi(Build.VERSION_CODES.M)
+    public  void ignoreBatteryOptimization(){
+        Activity activity = this.cordova.getActivity();
+        PowerManager powerManager = (PowerManager) activity.getSystemService(POWER_SERVICE);
+        boolean hasIgnored = powerManager.isIgnoringBatteryOptimizations(activity.getPackageName());
+        //  判断当前APP是否有加入电池优化的白名单，如果没有，弹出加入电池优化的白名单的设置对话框。
+        if(!hasIgnored) {
+            Intent intent = new Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS);
+            intent.setData(Uri.parse("package:"+activity.getPackageName()));
+
+            try {
+                activity.startActivity(intent);
+            } catch (ActivityNotFoundException e) {
+                e.printStackTrace();
+            }
+        }
+
+    }
+
 
     public static boolean isHookByPackageName(Context context) {
         boolean isHook = false;

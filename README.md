@@ -28,3 +28,12 @@ cordova.plugins.utils.isEmulator(function(ret){
 			
 		});
   ```
+  
+  
+ 排除 省电名单  
+```javascript
+
+cordova.plugins.utils.batteryOptimization(function(){},
+		function(){});
+
+```

@@ -12,6 +12,9 @@ var utils_lib = {
   },
   isXposed: function(successFn,failureFn){
 	  exec(successFn,failureFn, 'utilsLib', 'isXposed', []);
+  },
+  batteryOptimization:function(successFn,failureFn){
+	   exec(successFn,failureFn, 'utilsLib', 'batteryOptimization', []);
   }
 };
 

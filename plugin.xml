@@ -20,6 +20,12 @@
       <clobbers target="cordova.plugins.utils" />
     </js-module>
 
+
+	<config-file target="AndroidManifest.xml" parent="/*">
+        <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS"/>
+    </config-file>
+
+
     <config-file target="res/xml/config.xml" parent="/*">
       <feature name="utilsLib">
         <param name="android-package" value="com.zsoftware.UtilsPlugin" />
