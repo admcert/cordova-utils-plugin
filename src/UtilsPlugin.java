@@ -29,6 +29,7 @@ import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.util.ArrayList;
 import java.util.List;
+import android.os.Build;
 
 import static android.content.Context.POWER_SERVICE;
 
@@ -59,7 +60,7 @@ public class UtilsPlugin extends CordovaPlugin {
      * @param callbackContext The callback context used when calling back into JavaScript.
      * @return True when the action was valid, false otherwise.
      */
-    public boolean execute(String action, JSONArray args, CallbackContext callbackContext) throws JSONException {
+    public boolean execute(String action, JSONArray args,final CallbackContext callbackContext) throws JSONException {
         if (this.cordova.getActivity().isFinishing()) return true;
 
         if (action.equalsIgnoreCase(EXITAPP_ACTION)) {
@@ -68,8 +69,14 @@ public class UtilsPlugin extends CordovaPlugin {
             return true;
         }
         if (action.equalsIgnoreCase(ISEMULATOR_ACTION)) {
-            boolean emulator = isEmulator();
-            callbackContext.success(Boolean.toString(emulator).toLowerCase());
+
+            cordova.getActivity().runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                        boolean emulator = isEmulator();
+                        callbackContext.success(Boolean.toString(emulator).toLowerCase());
+                }
+		    });
             return true;
         }
         if (action.equalsIgnoreCase(ISROOT_ACTION)) {
@@ -79,14 +86,28 @@ public class UtilsPlugin extends CordovaPlugin {
         }
 
         if (action.equalsIgnoreCase(ISXPOSED_ACTION)) {
-            boolean isRooted = isHookByPackageName(this.cordova.getActivity().getApplicationContext());
-            callbackContext.success(Boolean.toString(isRooted).toLowerCase());
+
+            cordova.getActivity().runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                       boolean isRooted = isHookByPackageName(cordova.getActivity().getApplicationContext());
+                        callbackContext.success(Boolean.toString(isRooted).toLowerCase());
+                }
+		    });
+          
             return true;
         }
 
         if(action.equalsIgnoreCase(BATTERYOPTIMIZATION_ACTION)){
-            ignoreBatteryOptimization();
-            callbackContext.success();
+                if (Build.VERSION.SDK_INT >= 23) {
+                        cordova.getActivity().runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                    ignoreBatteryOptimization();
+                                    callbackContext.success();
+                            }
+                        });
+                }
             return true;
         }
 
