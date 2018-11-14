@@ -15,6 +15,12 @@ var utils_lib = {
   },
   batteryOptimization:function(successFn,failureFn){
 	   exec(successFn,failureFn, 'utilsLib', 'batteryOptimization', []);
+  },
+  isNotificationEnabled: function (successFn,failureFn) { 
+    exec(successFn,failureFn, 'utilsLib', 'isNotificationEnabled', []);
+  },
+  goApplicationSetting: function (successFn,failureFn) { 
+    exec(successFn,failureFn, 'utilsLib', 'goApplicationSetting', []);
   }
 };
 

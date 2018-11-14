@@ -2,6 +2,8 @@ package com.zsoftware;
 
 import android.annotation.TargetApi;
 import android.app.Activity;
+import android.app.AppOpsManager;
+import android.app.NotificationManager;
 import android.content.ActivityNotFoundException;
 import android.content.Context;
 import android.content.Intent;
@@ -11,6 +13,7 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.PowerManager;
 import android.provider.Settings;
+import android.support.annotation.RequiresApi;
 import android.util.Log;
 
 import org.apache.cordova.CallbackContext;
@@ -27,8 +30,12 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
+import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
+
 import android.os.Build;
 
 import static android.content.Context.POWER_SERVICE;
@@ -45,6 +52,14 @@ public class UtilsPlugin extends CordovaPlugin {
     private static String ISXPOSED_ACTION = "isXposed";
 
     private static String BATTERYOPTIMIZATION_ACTION = "batteryOptimization";
+
+    private static String ISNOTIFICATION_ENABLED = "isNotificationEnabled"; //是否开启推送通知
+    private static String GOTO_APPLICATION_SETTING = "goApplicationSetting";//跳转应用设置界面
+
+
+    private static String CHECK_OP_NO_THROW = "checkOpNoThrow";
+    private static String OP_POST_NOTIFICATION = "OP_POST_NOTIFICATION";
+
     /**
      * Constructor.
      */
@@ -60,8 +75,35 @@ public class UtilsPlugin extends CordovaPlugin {
      * @param callbackContext The callback context used when calling back into JavaScript.
      * @return True when the action was valid, false otherwise.
      */
-    public boolean execute(String action, JSONArray args,final CallbackContext callbackContext) throws JSONException {
+    public boolean execute(String action, JSONArray args, final CallbackContext callbackContext) throws JSONException {
         if (this.cordova.getActivity().isFinishing()) return true;
+
+        if (action.equalsIgnoreCase(GOTO_APPLICATION_SETTING)) { //跳转应用设置界面
+            cordova.getActivity().runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    gotoApplicationSetting();
+                    callbackContext.success();
+                }
+            });
+            return true;
+        }
+
+
+        if (action.equalsIgnoreCase(ISNOTIFICATION_ENABLED)) { //是否开启推送权限
+            if (Build.VERSION.SDK_INT >= 19) {
+                final Context context = this.cordova.getActivity();
+                cordova.getActivity().runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        Boolean retVal = isNotificationEnabled(context);
+                        Log.i(LOG_TAG, "retVal:" + retVal);
+                        callbackContext.success(String.valueOf(retVal).toLowerCase());
+                    }
+                });
+            }
+            return true;
+        }
 
         if (action.equalsIgnoreCase(EXITAPP_ACTION)) {
             this.cordova.getActivity().finish();
@@ -73,10 +115,10 @@ public class UtilsPlugin extends CordovaPlugin {
             cordova.getActivity().runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
-                        boolean emulator = isEmulator();
-                        callbackContext.success(Boolean.toString(emulator).toLowerCase());
+                    boolean emulator = isEmulator();
+                    callbackContext.success(Boolean.toString(emulator).toLowerCase());
                 }
-		    });
+            });
             return true;
         }
         if (action.equalsIgnoreCase(ISROOT_ACTION)) {
@@ -90,24 +132,24 @@ public class UtilsPlugin extends CordovaPlugin {
             cordova.getActivity().runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
-                       boolean isRooted = isHookByPackageName(cordova.getActivity().getApplicationContext());
-                        callbackContext.success(Boolean.toString(isRooted).toLowerCase());
+                    boolean isRooted = isHookByPackageName(cordova.getActivity().getApplicationContext());
+                    callbackContext.success(Boolean.toString(isRooted).toLowerCase());
                 }
-		    });
-          
+            });
+
             return true;
         }
 
-        if(action.equalsIgnoreCase(BATTERYOPTIMIZATION_ACTION)){
-                if (Build.VERSION.SDK_INT >= 23) {
-                        cordova.getActivity().runOnUiThread(new Runnable() {
-                            @Override
-                            public void run() {
-                                    ignoreBatteryOptimization();
-                                    callbackContext.success();
-                            }
-                        });
-                }
+        if (action.equalsIgnoreCase(BATTERYOPTIMIZATION_ACTION)) {
+            if (Build.VERSION.SDK_INT >= 23) {
+                cordova.getActivity().runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        ignoreBatteryOptimization();
+                        callbackContext.success();
+                    }
+                });
+            }
             return true;
         }
 
@@ -116,15 +158,110 @@ public class UtilsPlugin extends CordovaPlugin {
         return true;
     }
 
+
+    /**
+     * Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT
+     * 19及以上
+     *
+     * @param context
+     * @return
+     */
+    @RequiresApi(api = Build.VERSION_CODES.KITKAT)
+    public static boolean isEnableV19(Context context) {
+        AppOpsManager mAppOps = (AppOpsManager) context.getSystemService(Context.APP_OPS_SERVICE);
+        ApplicationInfo appInfo = context.getApplicationInfo();
+        String pkg = context.getApplicationContext().getPackageName();
+        int uid = appInfo.uid;
+        Class appOpsClass;
+        try {
+            appOpsClass = Class.forName(AppOpsManager.class.getName());
+            Method checkOpNoThrowMethod = appOpsClass.getMethod(CHECK_OP_NO_THROW, Integer.TYPE, Integer.TYPE,
+                    String.class);
+            Field opPostNotificationValue = appOpsClass.getDeclaredField(OP_POST_NOTIFICATION);
+
+            int value = (Integer) opPostNotificationValue.get(Integer.class);
+            return ((Integer) checkOpNoThrowMethod.invoke(mAppOps, value, uid, pkg) == AppOpsManager.MODE_ALLOWED);
+
+        } catch (ClassNotFoundException e) {
+            Log.e(LOG_TAG, "", e);
+        } catch (NoSuchMethodException e) {
+            Log.e(LOG_TAG, "", e);
+        } catch (NoSuchFieldException e) {
+            Log.e(LOG_TAG, "", e);
+        } catch (InvocationTargetException e) {
+            Log.e(LOG_TAG, "", e);
+        } catch (IllegalAccessException e) {
+            Log.e(LOG_TAG, "", e);
+        }
+        return false;
+    }
+
+    public static Boolean isEnableV26(Context context) {
+        try {
+            NotificationManager notificationManager = (NotificationManager)
+                    context.getSystemService(Context.NOTIFICATION_SERVICE);
+            Method sServiceField = notificationManager.getClass().getDeclaredMethod("getService");
+            sServiceField.setAccessible(true);
+            Object sService = sServiceField.invoke(notificationManager);
+
+            ApplicationInfo appInfo = context.getApplicationInfo();
+            String pkg = context.getApplicationContext().getPackageName();
+            int uid = appInfo.uid;
+
+            Method method = sService.getClass().getDeclaredMethod("areNotificationsEnabledForPackage"
+                    , String.class, Integer.TYPE);
+            method.setAccessible(true);
+            return (Boolean) method.invoke(sService, pkg, uid);
+        } catch (Exception e) {
+            Log.e(LOG_TAG, "", e);
+        }
+        return false;
+    }
+
+
+    /**
+     * 跳转应用设置界面
+     */
+    private void gotoApplicationSetting() {
+        Intent intent = new Intent();
+        final Context context = this.cordova.getActivity();
+        if (Build.VERSION.SDK_INT >= 26) {
+            // android 8.0引导
+            intent.setAction("android.settings.APP_NOTIFICATION_SETTINGS");
+            intent.putExtra("android.provider.extra.APP_PACKAGE", context.getPackageName());
+        } else if (Build.VERSION.SDK_INT >= 21) {
+            // android 5.0-7.0
+            intent.setAction("android.settings.APP_NOTIFICATION_SETTINGS");
+            intent.putExtra("app_package", context.getPackageName());
+            intent.putExtra("app_uid", context.getApplicationInfo().uid);
+        } else {
+            // 其他
+            intent.setAction("android.settings.APPLICATION_DETAILS_SETTINGS");
+            intent.setData(Uri.fromParts("package", context.getPackageName(), null));
+        }
+        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        context.startActivity(intent);
+    }
+
+
+    public static boolean isNotificationEnabled(Context context) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            return isEnableV26(context);
+        } else {
+            return isEnableV19(context);
+        }
+    }
+
+
     @TargetApi(Build.VERSION_CODES.M)
-    public  void ignoreBatteryOptimization(){
+    public void ignoreBatteryOptimization() {
         Activity activity = this.cordova.getActivity();
         PowerManager powerManager = (PowerManager) activity.getSystemService(POWER_SERVICE);
         boolean hasIgnored = powerManager.isIgnoringBatteryOptimizations(activity.getPackageName());
         //  判断当前APP是否有加入电池优化的白名单，如果没有，弹出加入电池优化的白名单的设置对话框。
-        if(!hasIgnored) {
+        if (!hasIgnored) {
             Intent intent = new Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS);
-            intent.setData(Uri.parse("package:"+activity.getPackageName()));
+            intent.setData(Uri.parse("package:" + activity.getPackageName()));
 
             try {
                 activity.startActivity(intent);
